@@ -86,6 +86,27 @@ public class BasicStrategy {
     /*      2,2 */ { P, P, P, P, P, P, H, H, H, H }
     };
 
+  /**
+   * Created helper method to calculate the column index
+   * in the doSection methods. The logic in all the methods
+   * is the same, so this helps the code adhere to
+   * DRY principles.
+   * @param upCard The dealer's upcard
+   */
+  public int getColumn(Card upCard) {
+    // Subtract 2 since the dealer's up-card starts at 2
+    int colIndex = upCard.getRank() - 2;
+
+    if(upCard.isFace())
+      colIndex = faceCardValue - 2;
+
+      // Ace is the 10th card (index 9)
+    else if(upCard.isAce())
+      colIndex = 9;
+
+    return colIndex;
+  }
+
 
   /**
    * Gets the play for player's hand vs. dealer up-card.
@@ -134,17 +155,8 @@ public class BasicStrategy {
 
     Play[] row = section1Rules[rowIndex];
 
-    // Subtract 2 since the dealer's up-card starts at 2
-    int colIndex = upCard.getRank() - 2;
+    int colIndex = getColumn(upCard);
 
-    if(upCard.isFace())
-      colIndex = faceCardValue - 2;
-
-    // Ace is the 10th card (index 9)
-    else if(upCard.isAce())
-      colIndex = 9;
-
-    // At this row, col we should have the correct play defined.
     return row[colIndex];
   }
 
@@ -162,15 +174,7 @@ public class BasicStrategy {
 
     Play[] row = section2Rules[rowIndex];
 
-    // Subtract 2 since the dealer's up-card starts at 2
-    int colIndex = upCard.getRank() - 2;
-
-    if(upCard.isFace())
-      colIndex = faceCardValue - 2;
-
-      // Ace is the 10th card (index 9)
-    else if(upCard.isAce())
-      colIndex = 9;
+    int colIndex = getColumn(upCard);
 
     return row[colIndex];
   }
@@ -189,15 +193,7 @@ public class BasicStrategy {
 
     Play[] row = section3Rules[rowIndex];
 
-    // Subtract 2 since the dealer's up-card starts at 2
-    int colIndex = upCard.getRank() - 2;
-
-    if(upCard.isFace())
-      colIndex = faceCardValue - 2;
-
-      // Ace is the 10th card (index 9)
-    else if(upCard.isAce())
-      colIndex = 9;
+    int colIndex = getColumn(upCard);
 
     return row[colIndex];
   }
@@ -229,15 +225,7 @@ public class BasicStrategy {
 
     Play[] row = section4Rules[rowIndex];
 
-    // Subtract 2 since the dealer's up-card starts at 2
-    int colIndex = upCard.getRank() - 2;
-
-    if(upCard.isFace())
-      colIndex = faceCardValue - 2;
-
-      // Ace is the 10th card (index 9)
-    else if(upCard.isAce())
-      colIndex = 9;
+    int colIndex = getColumn(upCard);
 
     return row[colIndex];
   }
