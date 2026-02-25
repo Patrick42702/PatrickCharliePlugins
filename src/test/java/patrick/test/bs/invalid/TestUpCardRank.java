@@ -11,7 +11,7 @@ import patrick.client.BasicStrategy;
 
 /**
  * This tests that a card's rank must be between
- * 1-11 to be valid
+ * 1-13 to be valid
  * @author Patrick Muller
  */
 public class TestUpCardRank extends TestCase {
@@ -25,8 +25,8 @@ public class TestUpCardRank extends TestCase {
     hand.hit(new Card(2, Card.Suit.HEARTS));
     hand.hit(new Card(11, Card.Suit.HEARTS));
 
-    // 12 is not a valid rank
-    Card upCard = new Card(12, Card.Suit.DIAMONDS);
+    // 14 is not a valid rank
+    Card upCard = new Card(14, Card.Suit.DIAMONDS);
 
     BasicStrategy bs = new BasicStrategy();
 

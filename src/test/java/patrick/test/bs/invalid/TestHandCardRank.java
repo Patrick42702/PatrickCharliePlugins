@@ -22,10 +22,10 @@ public class TestHandCardRank extends TestCase {
   public void test() {
     Hand hand = new Hand(new Hid(Seat.YOU));
 
-    // Test if it picks up the invalid ranked card, 12
+    // Test if it picks up the invalid ranked card, 14
     hand.hit(new Card(2, Card.Suit.CLUBS));
     hand.hit(new Card(5, Card.Suit.CLUBS));
-    hand.hit(new Card(12, Card.Suit.CLUBS));
+    hand.hit(new Card(14, Card.Suit.CLUBS));
 
     Card upCard = new Card(7, Card.Suit.CLUBS);
 
