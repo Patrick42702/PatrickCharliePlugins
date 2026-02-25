@@ -28,6 +28,9 @@ public class BasicStrategy {
   public final static Play S = Play.STAY;
   public final static Play D = Play.DOUBLE_DOWN;
 
+  // Face cards have a value of 10.
+  public final static int faceCardValue = 10;
+
   /** Rules for section 1; see Instructional Services (2000) pocket card */
   Play[][] section1Rules = {
     /*         2  3  4  5  6  7  8  9  T  A  */
@@ -98,15 +101,19 @@ public class BasicStrategy {
     Card card1 = hand.getCard(0);
     Card card2 = hand.getCard(1);
 
-    if(hand.isPair()) {
+    // All pairs are evaluated in section 4 of the strategy card
+    if(hand.isPair())
       return doSection4(hand,upCard);
-    }
-    else if(hand.size() == 2 && (card1.getRank() == Card.ACE || card2.getRank() == Card.ACE)) {
+
+    // All cards in section 3 have 1 Ace card + any other card
+    else if(hand.size() == 2 && (card1.getRank() == Card.ACE || card2.getRank() == Card.ACE))
       return doSection3(hand,upCard);
-    }
-    else if(hand.getValue() >=5 && hand.getValue() < 12) {
+
+    // All cards in section 2 are between and include values of 5 and 11
+    else if(hand.getValue() >=5 && hand.getValue() < 12)
       return doSection2(hand, upCard);
-    }
+
+    // Any other hand with a value greater or equal to 12 lands in section 1
     else if(hand.getValue() >= 12)
       return doSection1(hand,upCard);
 
@@ -131,9 +138,9 @@ public class BasicStrategy {
     int colIndex = upCard.getRank() - 2;
 
     if(upCard.isFace())
-      colIndex = 10 - 2;
+      colIndex = faceCardValue - 2;
 
-      // Ace is the 10th card (index 9)
+    // Ace is the 10th card (index 9)
     else if(upCard.isAce())
       colIndex = 9;
 
@@ -150,7 +157,7 @@ public class BasicStrategy {
     int value = hand.getValue();
 
     // Subtract value from 11 because the player's hand starts at 11
-    // in section 2 and we're working our way down from index zero.
+    // in section 2, and we're working our way down from index zero.
     int rowIndex = 11 - value;
 
     Play[] row = section2Rules[rowIndex];
@@ -159,7 +166,7 @@ public class BasicStrategy {
     int colIndex = upCard.getRank() - 2;
 
     if(upCard.isFace())
-      colIndex = 10 - 2;
+      colIndex = faceCardValue - 2;
 
       // Ace is the 10th card (index 9)
     else if(upCard.isAce())
@@ -186,7 +193,7 @@ public class BasicStrategy {
     int colIndex = upCard.getRank() - 2;
 
     if(upCard.isFace())
-      colIndex = 10 - 2;
+      colIndex = faceCardValue - 2;
 
       // Ace is the 10th card (index 9)
     else if(upCard.isAce())
@@ -226,7 +233,7 @@ public class BasicStrategy {
     int colIndex = upCard.getRank() - 2;
 
     if(upCard.isFace())
-      colIndex = 10 - 2;
+      colIndex = faceCardValue - 2;
 
       // Ace is the 10th card (index 9)
     else if(upCard.isAce())
