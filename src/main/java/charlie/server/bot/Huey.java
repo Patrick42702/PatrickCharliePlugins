@@ -13,150 +13,201 @@ import patrick.client.BotBasicStrategy;
 import java.util.*;
 
 public class Huey implements IBot, Runnable {
-    private final static int MAX_DELAY = 3000;
-    private final static Random random = new Random();
+  // On average, we want 2.5-second delay, so set random to 5 seconds
+  private final static int MIN_DELAY = 2000;
+  private final static int MAX_DELAY = 3000;
+  private final static Random random = new Random();
 
-    Seat mySeat;
-    Hid myHid = new Hid();
-    Map<Hid, Hand> hands = new HashMap<>();
-    Dealer dealer;
-    Card upCard;
-    boolean myTurn = false;
-    BasicStrategy bs = new BotBasicStrategy();
+  Seat mySeat;
+  Hid myHid;
+  Hand myHand;
+  Hid dealerHid;
+  Dealer dealer;
+  Card upCard;
+  boolean myTurn = false;
+  BasicStrategy bs = new BotBasicStrategy();
 
-    public void randDelay() {
-        try{
-            Thread.sleep(Huey.random.nextInt(Huey.MAX_DELAY));
-        }
-        catch (InterruptedException e){
-            System.out.println("Interrupted during randDelay");
-        }
+  /**
+   * Set the calling thread to sleep for a random amount of time between 2-3 seconds,
+   * so that the average sleep time should be about 2.5 seconds
+   * @author Patrick Muller
+   */
+  public void randDelay() {
+    try {
+      Thread.sleep(Huey.random.nextInt(Huey.MIN_DELAY, Huey.MAX_DELAY + 1));
+    } catch (InterruptedException e) {
+      System.out.println("Interrupted during randDelay");
+    }
+  }
+
+  /**
+   * dealer calls this method to get bot's hand, initialize member variable
+   * @author Patrick Muller
+   */
+  public Hand getHand() {
+    myHid = new Hid(mySeat);
+    myHand = new Hand(myHid);
+    return myHand;
+  }
+
+  /**
+   * set the dealer reference to member var
+   * @param dealer dealer reference
+   * @author Patrick Muller
+   */
+  public void setDealer(Dealer dealer) {
+    this.dealer = dealer;
+  }
+
+  /**
+   * accept our seat
+   * @param seat Our seat given by the dealer
+   * @author Patrick Muller
+   */
+  @Override
+  public void sit(Seat seat) {
+    mySeat = seat;
+  }
+
+  /**
+   * Method called when starting game.
+   * Add reference of dealers hand to member var.
+   * @param list list of hids in the game
+   * @param i count of hands
+   * @author Patrick Muller
+   */
+  @Override
+  public void startGame(List<Hid> list, int i) {
+    for (Hid hid : list) {
+      if (hid.getSeat() == Seat.DEALER) {
+        dealerHid = hid;
+      }
+    }
+  }
+
+  @Override
+  public void endGame(int i) {
+
+  }
+
+  /**
+   * Called when dealer deals a card to any player. Check if its our
+   * turn before calling the play
+   * @param hid Card getting dealt to this hid
+   * @param card The card getting dealt
+   * @param ints
+   * @author Patrick Muller
+   */
+  @Override
+  public void deal(Hid hid, Card card, int[] ints) {
+    // check if card is for us and our turn
+    if (hid.getSeat() == mySeat && myTurn) {
+      play(myHid);
+    }
+    // set the dealer's upCard
+    else if (hid.getSeat() == Seat.DEALER && card != null) {
+      upCard = card;
+    }
+  }
+
+  @Override
+  public void insure() {
+
+  }
+
+  @Override
+  public void bust(Hid hid) {
+
+  }
+
+  @Override
+  public void win(Hid hid) {
+
+  }
+
+  @Override
+  public void blackjack(Hid hid) {
+
+  }
+
+  @Override
+  public void charlie(Hid hid) {
+
+  }
+
+  @Override
+  public void lose(Hid hid) {
+
+  }
+
+  @Override
+  public void push(Hid hid) {
+
+  }
+
+  @Override
+  public void shuffling() {
+
+  }
+
+  /**
+   * Method invoked during turn change. Call our play if its our turn.
+   * @param hid hid of player's turn
+   * @author Patrick Muller
+   */
+  @Override
+  public void play(Hid hid) {
+    // not our hand, skip
+    if (hid.getSeat() != mySeat) {
+      myTurn = false;
+      return;
     }
 
-    public Hand getHand() {
-        return hands.get(myHid);
+    // now our turn
+    else if (hid.getSeat() == mySeat)
+      myTurn = true;
+
+    // get the bot's play
+    Play myPlay = bs.getPlay(myHand, upCard);
+
+    // Start a worker thread based on the bot strategy using dealer reference
+    if (myPlay == Play.STAY) {
+      new Thread(() -> {
+        randDelay();
+        dealer.stay(this, myHid);
+      }).start();
     }
 
-    public void setDealer(Dealer dealer) {
-        this.dealer = dealer;
+    else if (myPlay == Play.HIT) {
+      new Thread(() -> {
+        randDelay();
+        dealer.hit(this, hid);
+      }).start();
     }
 
-    @Override
-    public void sit(Seat seat) {
-        mySeat = Seat.RIGHT;
+    else if (myPlay == Play.DOUBLE_DOWN) {
+      // if play is a double down, our turn is now over regardless
+      myTurn = false;
+
+      new Thread(() -> {
+        randDelay();
+        dealer.doubleDown(this, hid);
+      }).start();
     }
 
-    @Override
-    public void startGame(List<Hid> list, int i) {
-        for (Hid hid : list) {
-            if (hid.getSeat() == mySeat)
-                myHid = hid;
-            hands.put(hid, new Hand());
-        }
+    else {
+      System.out.println("Play is None or split, something very wrong");
     }
+  }
 
-    @Override
-    public void endGame(int i) {
+  @Override
+  public void split(Hid hid, Hid hid1) {
 
-    }
+  }
 
-    @Override
-    public void deal(Hid hid, Card card, int[] ints) {
-        if (hid.getSeat() == mySeat) {
-            Hand myHand = hands.get(hid);
-            myHand.hit(card);
+  @Override
+  public void run() {
 
-            if (myTurn)
-                play(myHid);
-        }
-        if (hid.getSeat() == Seat.DEALER && card != null) {
-            Hand dealerHand = hands.get(hid);
-            dealerHand.hit(card);
-        }
-
-    }
-
-    @Override
-    public void insure() {
-
-    }
-
-    @Override
-    public void bust(Hid hid) {
-
-    }
-
-    @Override
-    public void win(Hid hid) {
-
-    }
-
-    @Override
-    public void blackjack(Hid hid) {
-
-    }
-
-    @Override
-    public void charlie(Hid hid) {
-
-    }
-
-    @Override
-    public void lose(Hid hid) {
-
-    }
-
-    @Override
-    public void push(Hid hid) {
-
-    }
-
-    @Override
-    public void shuffling() {
-
-    }
-
-    @Override
-    public void play(Hid hid) {
-        // not our hand, skip
-        if (hid != myHid)
-            return;
-
-        // now our turn
-        if (hid.getSeat() == mySeat){
-            myTurn = true;
-        }
-
-        Play myPlay = bs.getPlay(hands.get(hid), upCard);
-
-        if (myPlay == Play.STAY) {
-            new Thread(() -> {
-                randDelay();
-                dealer.stay(this, myHid);
-            }).start();
-        }
-        else if(myPlay == Play.HIT){
-            new Thread(() -> {
-                randDelay();
-                dealer.hit(this, hid);
-            });
-        }
-        else {
-            new Thread(() -> {
-                randDelay();
-                dealer.doubleDown(this, hid);
-            });
-        }
-    }
-
-    @Override
-    public void split(Hid hid, Hid hid1) {
-
-    }
-
-    @Override
-    public void run() {
-
-    }
+  }
 
 }
