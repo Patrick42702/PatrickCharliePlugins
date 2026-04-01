@@ -18,13 +18,21 @@ public class Huey implements IBot, Runnable {
   private final static int MAX_DELAY = 3000;
   private final static Random random = new Random();
 
+  // Hewey's seat, hid, and hand
   Seat mySeat;
   Hid myHid;
   Hand myHand;
+
+  // dealer's hid and dealer object to be used
   Hid dealerHid;
   Dealer dealer;
+
+  // upcard in the current game
   Card upCard;
+
   boolean myTurn = false;
+
+  // bot's basic strategy instance
   BasicStrategy bs = new BotBasicStrategy();
 
   /**
@@ -71,7 +79,7 @@ public class Huey implements IBot, Runnable {
 
   /**
    * Method called when starting game.
-   * Add reference of dealers hand to member var.
+   * Add reference of dealers hid to member var.
    * @param list list of hids in the game
    * @param i count of hands
    * @author Patrick Muller
