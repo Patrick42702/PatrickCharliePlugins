@@ -23,7 +23,8 @@
 
 package charlie.sidebet.view;
 
-import charlie.audio.Sound;
+import charlie.audio.Effect;
+import charlie.audio.SoundFactory;
 import charlie.card.Hid;
 import charlie.plugin.ISideBetView;
 import charlie.view.AMoneyManager;
@@ -37,8 +38,6 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
-
-import static java.awt.SystemColor.text;
 
 /**
  * This class implements the side bet view
@@ -67,17 +66,10 @@ public class SideBetView implements ISideBetView {
     protected int amt = 0;
     protected AMoneyManager moneyManager;
 
-    // chip sounds
-    private final static Sound CHIPS_IN_SOUND = new Sound("audio/Games_Poker_Chip_08950004.wav");
-    private final static Sound CHIPS_OUT_SOUND = new Sound("audio/Games_Poker_Chip_08950003.wav");
-
-    // this variable is responsible for firing sounds at the correct time
-    private static long lastTime = System.currentTimeMillis();
-
     private Random random = new Random();
 
     // these will be used to add visible chips to the side bet
-    private List<Chip> sideBetChips = new ArrayList<>();
+    private List<Chip> chips = new ArrayList<>();
 
     // offset the chip's position to the right of the betting circle
     int CHIP_BASE_X = X + DIAMETER / 2 + 10;  // to the right of circle
@@ -92,46 +84,35 @@ public class SideBetView implements ISideBetView {
     public void addChip(Image image, int chipWidth) {
         // place chips to the right of the betting circle with randomness
         // and use # of chips to avoid stacking them on top of each other.
-        int placeX = CHIP_BASE_X + sideBetChips.size() * chipWidth/3 + random.nextInt(10) - 5;
+        int placeX = CHIP_BASE_X + this.chips.size() * chipWidth/3 + random.nextInt(10) - 5;
         int placeY = CHIP_BASE_Y + random.nextInt(6) - 3;
 
         Chip chip = new Chip(image, placeX, placeY, amt);
 
-        sideBetChips.add(chip);
-    }
-
-
-
-    /**
-     * Plays a looping sound in the background.
-     *
-     * @param sound Sound
-     * @param loop  Number of times to loop sound
-     */
-    protected static void backgroundPlay(final Sound sound, final int loop) {
-        long now = System.currentTimeMillis();
-
-        if (now - lastTime < 500)
-            return;
-
-        lastTime = now;
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < loop; i++)
-                    sound.play();
-            }
-        }).start();
+        this.chips.add(chip);
     }
 
     /**
-     * Plays a sound once in the background.
-     *
-     * @param sound Sound
+     * Return true if the user clicked within the radius of the at-stake
+     * side bet circle.
+     * @param x x of where user clicked
+     * @param y y of where user clicked
+     * @return True if user clicked within the circle
      */
-    protected static void backgroundPlay(final Sound sound) {
-        backgroundPlay(sound, 1);
+    private boolean isInsideCircle(int x, int y) {
+        int radius = DIAMETER / 2;
+
+        int dx = x - X;
+        int dy = y - Y;
+
+        // Distance formula. We will square both sides to reduce
+        // compute as we don't need the exact distance.
+        // If the distance between where the user clicked and the
+        // center of the circle is greater than the radius ^ 2,
+        // return false
+        // Math.sqrt(dx * dx + dy * dy) = radius  OR
+        // (dx * dx + dy * dy) = Math.pow(radius, 2)
+        return (dx * dx + dy * dy) <= Math.pow(radius, 2);
     }
 
     public SideBetView() {
@@ -166,7 +147,7 @@ public class SideBetView implements ISideBetView {
                 amt += button.getAmt();
 
                 // spawn worker thread to play chips in sounds
-                backgroundPlay(CHIPS_IN_SOUND);
+                SoundFactory.play(Effect.CHIPS_IN);
 
                 // img of button that was pressed so we can render it
                 // next to the betting circle
@@ -181,14 +162,16 @@ public class SideBetView implements ISideBetView {
             }
         }
 
-        if (oldAmt == amt) {
+        // if the click was inside the side bet circle
+        // and the amount didn't change, clear.
+        if (oldAmt == amt && isInsideCircle(x, y)) {
             amt = 0;
 
             // spawn worker thread to play chips out sound
-            backgroundPlay(CHIPS_OUT_SOUND);
+            SoundFactory.play(Effect.CHIPS_OUT);
 
             // side bet cleared, un-render the chips
-            sideBetChips.clear();
+            this.chips.clear();
 
             LOG.info("B. side bet amount cleared");
         }
@@ -266,7 +249,7 @@ public class SideBetView implements ISideBetView {
 
         g.drawString(text, x, y);
 
-        for (Chip chip : sideBetChips) {
+        for (Chip chip : this.chips) {
             chip.render(g);
         }
     }
