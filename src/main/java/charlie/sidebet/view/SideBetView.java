@@ -48,6 +48,7 @@ import org.apache.log4j.Logger;
 public class SideBetView implements ISideBetView {
     private final Logger LOG = Logger.getLogger(SideBetView.class);
 
+    // Home base for side bet at-stake circle
     public final static int X = 400;
     public final static int Y = 200;
     public final static int DIAMETER = 50;
@@ -70,9 +71,9 @@ public class SideBetView implements ISideBetView {
     private Random random = new Random();
 
     // these will be used to add visible chips to the side bet
-    private List<Chip> chips = new ArrayList<>();
+    private final List<Chip> chips = new ArrayList<>();
 
-    // offset the chip's position to the right of the betting circle
+    // offset the chip's position to the right of the at-stake circle
     int CHIP_BASE_X = X + DIAMETER / 2 + 10;  // to the right of circle
     int CHIP_BASE_Y = Y - DIAMETER / 2 + 5;
 
@@ -84,13 +85,13 @@ public class SideBetView implements ISideBetView {
     private final int PAYOUT_X = X + 50;
     private final int PAYOUT_Y = Y - 85;
 
-    // outcome UI values
+    // outcome UI values, no push. Only win or lose
     protected Color looseColorBg = new Color(250, 58, 5);
     protected Color looseColorFg = Color.WHITE;
     protected Color winColorFg = Color.BLACK;
     protected Color winColorBg = new Color(116, 255, 4);
-    protected Color pushColorFg = Color.BLACK;
-    protected Color pushColorBg = Color.CYAN;
+
+    // outcome variable for render() to draw correct outcome
     protected AHand.Outcome outcome = AHand.Outcome.None;
 
     // place outcome on top of/next to side bet chips
@@ -106,13 +107,13 @@ public class SideBetView implements ISideBetView {
      */
     public void addChip(Image image, int chipWidth) {
         // place chips to the right of the betting circle with randomness
-        // and use # of chips to avoid stacking them on top of each other.
-        int placeX = CHIP_BASE_X + this.chips.size() * chipWidth / 3 + random.nextInt(10) - 5;
+        // and use chips.size() to avoid stacking them on top of each other.
+        int placeX = CHIP_BASE_X + chips.size() * chipWidth / 3 + random.nextInt(10) - 5;
         int placeY = CHIP_BASE_Y + random.nextInt(6) - 3;
 
         Chip chip = new Chip(image, placeX, placeY, amt);
 
-        this.chips.add(chip);
+        chips.add(chip);
     }
 
     /**
@@ -134,7 +135,8 @@ public class SideBetView implements ISideBetView {
         // If the distance between where the user clicked and the
         // center of the circle is greater than the radius ^ 2,
         // return false
-        // Math.sqrt(dx * dx + dy * dy) = radius  OR
+        // Math.sqrt(dx * dx + dy * dy) = radius
+        // OR
         // (dx * dx + dy * dy) = Math.pow(radius, 2)
         return (dx * dx + dy * dy) <= Math.pow(radius, 2);
     }
@@ -170,11 +172,10 @@ public class SideBetView implements ISideBetView {
             if (button.isPressed(x, y)) {
                 amt += button.getAmt();
 
-                // spawn worker thread to play chips in sounds
+                // Added chip to side bet, play sound
                 SoundFactory.play(Effect.CHIPS_IN);
 
-                // img of button that was pressed so we can render it
-                // next to the betting circle
+                // Image of button that was pressed
                 Image img = button.getImage();
 
                 int chipWidth = img.getWidth(null);
@@ -191,7 +192,7 @@ public class SideBetView implements ISideBetView {
         if (oldAmt == amt && isInsideCircle(x, y)) {
             amt = 0;
 
-            // spawn worker thread to play chips out sound
+            // Removed chips from bet circle, play chips out
             SoundFactory.play(Effect.CHIPS_OUT);
 
             // side bet cleared, un-render the chips
@@ -210,31 +211,23 @@ public class SideBetView implements ISideBetView {
     public void ending(Hid hid) {
         double bet = hid.getSideAmt();
 
+        // Player never made the side bet
         if (bet == 0)
             return;
 
         LOG.info("side bet outcome = " + bet);
 
-        LOG.info("side bet outcome = " + bet);
-        LOG.info("side bet previous amt = " + amt);
-
         // Update the bankroll
         moneyManager.update(bet);
 
-        // we won side bet
-        if (bet > amt) {
+        // We won the side bet
+        if (bet > 0) {
             outcome = AHand.Outcome.Win;
         }
 
         // we lost side bet
-        else if (bet < amt) {
+        else  {
             outcome = AHand.Outcome.Lose;
-        }
-
-        // we did something other than win or lose the side bet which
-        // should not be possible, log it. Should probably throw exception.
-        else {
-            LOG.info("Problem with Side bet outcome which is: " + this.outcome);
         }
 
         LOG.info("new bankroll = " + moneyManager.getBankroll());
@@ -276,37 +269,38 @@ public class SideBetView implements ISideBetView {
         // set font for rendering
         g.setFont(font);
 
-        // Draw side bet payouts under the shoe
-        g.setColor(Color.YELLOW);
-        g.drawString(super7Payout, PAYOUT_X, PAYOUT_Y);
-        g.drawString(RoyalMatchPayout, PAYOUT_X, PAYOUT_Y + 20);
-        g.drawString(Exactly13Payout, PAYOUT_X, PAYOUT_Y + 40);
-
-        // Draw the at-stake place on the table
+        // Draw the at-stake circle on the table
         g.setColor(Color.RED);
         g.setStroke(dashed);
         g.drawOval(X - DIAMETER / 2, Y - DIAMETER / 2, DIAMETER, DIAMETER);
-
-        // Draw the at-stake amount
-        g.setColor(Color.WHITE);
 
         // calculate the centered X and Y coordinate and use it to draw
         // the side bet amount. Code taken from AtSteakSprite
         String text = amt + "";
         FontMetrics fm = g.getFontMetrics(font);
 
-        // because we drew the circle at the x and y coordinates / 2, we
-        // don't need to account for it when calculating the position of the text.
+        // Calculate the width and height of the string to center as best as possible
+        // inside the circle. Taken from AtSteakSprite.java
         int x = X - fm.charsWidth(text.toCharArray(), 0, text.length()) / 2;
         int y = Y + fm.getHeight() / 4;
 
+        // Draw the at-stake amount
+        g.setColor(Color.WHITE);
         g.drawString(text, x, y);
+
+        // Draw side bet payouts under the shoe
+        g.setColor(Color.YELLOW);
+        g.setStroke(stroke);
+        g.drawString(super7Payout, PAYOUT_X, PAYOUT_Y);
+        g.drawString(RoyalMatchPayout, PAYOUT_X, PAYOUT_Y + 20);
+        g.drawString(Exactly13Payout, PAYOUT_X, PAYOUT_Y + 40);
 
         for (Chip chip : this.chips) {
             chip.render(g);
         }
 
-        // Figure the outcome text
+        // Draw outcome text if outcome is set. Idea from AHand.java,
+        // tweaked a bit to ignore PUSH outcome.
         String outcomeText = "";
         if (outcome != AHand.Outcome.None) {
             outcomeText += " " + outcome.toString().toUpperCase() + " ! ";
@@ -314,7 +308,6 @@ public class SideBetView implements ISideBetView {
 
         int w = fm.charsWidth(outcomeText.toCharArray(), 0, outcomeText.length());
         int h = fm.getHeight();
-
 
         // Paint the outcome background
         if (outcome == AHand.Outcome.Lose) {
@@ -333,7 +326,6 @@ public class SideBetView implements ISideBetView {
         }
 
         g.drawString(outcomeText, OUTCOME_X, OUTCOME_Y);
-
 
     }
 }
