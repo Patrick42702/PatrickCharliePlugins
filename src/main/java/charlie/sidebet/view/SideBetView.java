@@ -27,6 +27,7 @@ import charlie.audio.Effect;
 import charlie.audio.SoundFactory;
 import charlie.card.Hid;
 import charlie.plugin.ISideBetView;
+import charlie.view.AHand;
 import charlie.view.AMoneyManager;
 
 import charlie.view.sprite.Chip;
@@ -75,16 +76,38 @@ public class SideBetView implements ISideBetView {
     int CHIP_BASE_X = X + DIAMETER / 2 + 10;  // to the right of circle
     int CHIP_BASE_Y = Y - DIAMETER / 2 + 5;
 
+    private final String super7Payout = "SUPER 7 pays 3:1";
+    private final String RoyalMatchPayout = "ROYAL MATCH pays 25:1";
+    private final String Exactly13Payout = "Exactly 13 pays 1:1";
+
+    // get position of payout strings from the at-stake base
+    private final int PAYOUT_X = X + 50;
+    private final int PAYOUT_Y = Y - 85;
+
+    // outcome UI values
+    protected Color looseColorBg = new Color(250, 58, 5);
+    protected Color looseColorFg = Color.WHITE;
+    protected Color winColorFg = Color.BLACK;
+    protected Color winColorBg = new Color(116, 255, 4);
+    protected Color pushColorFg = Color.BLACK;
+    protected Color pushColorBg = Color.CYAN;
+    protected AHand.Outcome outcome = AHand.Outcome.None;
+
+    // place outcome on top of/next to side bet chips
+    protected final int OUTCOME_X = CHIP_BASE_X + 5;
+    protected final int OUTCOME_Y = CHIP_BASE_Y + 25;
+
     /**
      * Add a new chip to the screen, with a bit of randomness to make it
      * appear as if we were at a real casino.
-     * @param image The image of the chip button that was pressed
+     *
+     * @param image     The image of the chip button that was pressed
      * @param chipWidth The width of the chip button that was pressed
      */
     public void addChip(Image image, int chipWidth) {
         // place chips to the right of the betting circle with randomness
         // and use # of chips to avoid stacking them on top of each other.
-        int placeX = CHIP_BASE_X + this.chips.size() * chipWidth/3 + random.nextInt(10) - 5;
+        int placeX = CHIP_BASE_X + this.chips.size() * chipWidth / 3 + random.nextInt(10) - 5;
         int placeY = CHIP_BASE_Y + random.nextInt(6) - 3;
 
         Chip chip = new Chip(image, placeX, placeY, amt);
@@ -95,6 +118,7 @@ public class SideBetView implements ISideBetView {
     /**
      * Return true if the user clicked within the radius of the at-stake
      * side bet circle.
+     *
      * @param x x of where user clicked
      * @param y y of where user clicked
      * @return True if user clicked within the circle
@@ -191,8 +215,27 @@ public class SideBetView implements ISideBetView {
 
         LOG.info("side bet outcome = " + bet);
 
+        LOG.info("side bet outcome = " + bet);
+        LOG.info("side bet previous amt = " + amt);
+
         // Update the bankroll
         moneyManager.update(bet);
+
+        // we won side bet
+        if (bet > amt) {
+            outcome = AHand.Outcome.Win;
+        }
+
+        // we lost side bet
+        else if (bet < amt) {
+            outcome = AHand.Outcome.Lose;
+        }
+
+        // we did something other than win or lose the side bet which
+        // should not be possible, log it. Should probably throw exception.
+        else {
+            LOG.info("Problem with Side bet outcome which is: " + this.outcome);
+        }
 
         LOG.info("new bankroll = " + moneyManager.getBankroll());
     }
@@ -202,6 +245,8 @@ public class SideBetView implements ISideBetView {
      */
     @Override
     public void starting() {
+        // remove the outcome from the render
+        outcome = AHand.Outcome.None;
     }
 
     /**
@@ -228,13 +273,21 @@ public class SideBetView implements ISideBetView {
      */
     @Override
     public void render(Graphics2D g) {
+        // set font for rendering
+        g.setFont(font);
+
+        // Draw side bet payouts under the shoe
+        g.setColor(Color.YELLOW);
+        g.drawString(super7Payout, PAYOUT_X, PAYOUT_Y);
+        g.drawString(RoyalMatchPayout, PAYOUT_X, PAYOUT_Y + 20);
+        g.drawString(Exactly13Payout, PAYOUT_X, PAYOUT_Y + 40);
+
         // Draw the at-stake place on the table
         g.setColor(Color.RED);
         g.setStroke(dashed);
         g.drawOval(X - DIAMETER / 2, Y - DIAMETER / 2, DIAMETER, DIAMETER);
 
         // Draw the at-stake amount
-        g.setFont(font);
         g.setColor(Color.WHITE);
 
         // calculate the centered X and Y coordinate and use it to draw
@@ -252,5 +305,35 @@ public class SideBetView implements ISideBetView {
         for (Chip chip : this.chips) {
             chip.render(g);
         }
+
+        // Figure the outcome text
+        String outcomeText = "";
+        if (outcome != AHand.Outcome.None) {
+            outcomeText += " " + outcome.toString().toUpperCase() + " ! ";
+        }
+
+        int w = fm.charsWidth(outcomeText.toCharArray(), 0, outcomeText.length());
+        int h = fm.getHeight();
+
+
+        // Paint the outcome background
+        if (outcome == AHand.Outcome.Lose) {
+            g.setColor(looseColorBg);
+        } else {
+            g.setColor(winColorBg);
+        }
+
+        g.fillRoundRect(OUTCOME_X, OUTCOME_Y - h + 5, w, h, 5, 5);
+
+        // Paint the outcome foreground
+        if (outcome == AHand.Outcome.Lose) {
+            g.setColor(looseColorFg);
+        } else {
+            g.setColor(winColorFg);
+        }
+
+        g.drawString(outcomeText, OUTCOME_X, OUTCOME_Y);
+
+
     }
 }
